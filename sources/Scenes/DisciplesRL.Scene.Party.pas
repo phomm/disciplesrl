@@ -213,7 +213,7 @@ begin
   with Party.Creature[Position] do
   begin
     if Active then
-      DrawUnitInfo(Name[0], AX, AY, Level, Experience, HitPoints, MaxHitPoints,
+      DrawUnitInfo(Name, AX, AY, Level, Experience, HitPoints, MaxHitPoints,
         Damage, Heal, Armor, Initiative, ChancesToHit, ShowExp);
   end;
 end;
@@ -222,7 +222,7 @@ procedure TSceneParty.DrawUnitInfo(AX, AY: Integer; ACreature: TCreatureEnum;
   IsAdv: Boolean = True);
 begin
   with TCreature.Character(ACreature) do
-    DrawUnitInfo(Name[0], AX, AY, Level, 0, HitPoints, HitPoints, Damage, Heal,
+    DrawUnitInfo(NameInf, AX, AY, Level, 0, HitPoints, HitPoints, Damage, Heal,
       Armor, Initiative, ChancesToHit, IsAdv);
 end;
 

@@ -6,7 +6,11 @@ interface
 {$MODESWITCH ADVANCEDRECORDS}
 {$ENDIF}
 
+// to assign fields in creature base, and overgo lack of rtti for record props
+{$WRITEABLECONST ON}
+
 uses
+  Rtti,
   DisciplesRL.Resources;
 
 type
@@ -215,7 +219,7 @@ const
     (crPossessed, crGargoyle, crDevil)) // crCultist
     //
     );
-{$REGION texts}
+{$REGION ' texts '}
   {
     Ардоберт
     Верок
@@ -436,12 +440,19 @@ type
   TCreatureGender = (cgMale, cgFemale, cgNeuter, cgPlural);
 
 type
+
+  TCreatureProperty = (cpArmor, cpNameInf, cpNameGen, cpSize, cpReachEnum,
+    cpSourceEnum);
+
   TCreatureBase = record
+  public
     Race: TRaceEnum;
     SubRace: TSubRaceEnum;
     ResEnum: TResEnum;
     Size: TCreatureSize;
+  private
     Name: array [0 .. 1] of string;
+  public
     Description: array [0 .. 2] of string;
     HitPoints: Integer;
     Initiative: Integer;
@@ -457,15 +468,23 @@ type
     Sound: array [TCrSoundEnum] of TMusicEnum;
     Gender: TCreatureGender;
     AttackEnum: TAttackEnum;
+    NameInf: string;
+    NameGen: string;
+    function NameCased(Form: Integer = 0): string;
+    (*
+    even {$M+}{$METHODINFO ON} can't get record prop by TRttiType.GetProperty
+    property NameInf: string index 0 read NameCased;
+    property NameGen: string index 1 read NameCased;
+    *)
   end;
 
 type
   TCreature = record
+  public
     Active: Boolean;
     Paralyze: Boolean;
     Enum: TCreatureEnum;
     ResEnum: TResEnum;
-    Name: array [0 .. 1] of string;
     MaxHitPoints: Integer;
     HitPoints: Integer;
     Initiative: Integer;
@@ -474,10 +493,10 @@ type
     Level: Integer;
     Experience: Integer;
     Damage: Integer;
-    Armor: Integer;
+    //Armor: Integer;
     Heal: Integer;
-    SourceEnum: TSourceEnum;
-    ReachEnum: TReachEnum;
+//    SourceEnum: TSourceEnum;
+//    ReachEnum: TReachEnum;
     function IsLeader(): Boolean;
     function GenderEnding(VerbForm: Byte = 0): string;
     class procedure Clear(var ACreature: TCreature); static;
@@ -486,14 +505,31 @@ type
       const I: TCreatureEnum); static;
     class function GetRandomEnum(const P, Position: Integer)
       : TCreatureEnum; static;
+    function GetMemberValue(Creature: TCreatureBase;
+      MemberID: TCreatureProperty; TypeKind: TTypeKind): TValue;
+    function GetBaseMember<T>(MemberID: TCreatureProperty): T;
+    // need to have these redundant methods because prop can't have generic getter
+    function GetBaseInt(MemberID: TCreatureProperty): Integer;
+    function GetBaseStr(MemberID: TCreatureProperty): string;
+    function GetBaseSize(MemberID: TCreatureProperty): TCreatureSize;
+    function GetBaseReach(MemberID: TCreatureProperty): TReachEnum;
+    function GetBaseSource(MemberID: TCreatureProperty): TSourceEnum;
+    property Armor: Integer index cpArmor read GetBaseInt;
+    property Name: string index cpNameInf read GetBaseStr;
+    property NameGen: string index cpNameGen read GetBaseStr;
+    property Size: TCreatureSize index cpSize read GetBaseSize;
+    property ReachEnum: TReachEnum index cpReachEnum read GetBaseReach;
+    property SourceEnum: TSourceEnum index cpSourceEnum read GetBaseSource;
   end;
 
 implementation
 
 uses
   Math,
+  TypInfo,
   DisciplesRL.Saga;
 
+{$REGION ' Creature Base ' }
 const
   CreatureBase: array [TCreatureEnum] of TCreatureBase = (
     // None
@@ -867,13 +903,95 @@ const
 {$ENDREGION Animals}
     //
     );
+{$ENDREGION 'Creature Base' }
 
-  { TCreature }
+function EnumName(PEnum: Pointer; Ordinal: Integer; PrefixLen: Byte = 2): string;
+begin
+  Result := GetEnumName(PEnum, Ordinal);
+  Delete(Result, 1, PrefixLen);
+end;
+
+{ TCreature }
+
+function TCreature.GetMemberValue(Creature: TCreatureBase; MemberID: TCreatureProperty;
+  TypeKind: TTypeKind): TValue;
+const
+  CreatureBaseClassName = 'DisciplesRL.Creatures.TCreatureBase';
+  ErrorMsg = 'Error getting RTTI member %s of type %s from %s';
+var
+  c : TRttiContext;
+  MemberName: string;
+  Member: TRttiMember;
+  t: TRttiType;
+  Value: TValue;
+begin
+  c := TRttiContext.Create;
+  try
+    t := c.FindType(CreatureBaseClassName);
+    Value := TValue.Empty;
+    MemberName := EnumName(TypeInfo(TCreatureProperty), Ord(MemberID));
+    Member := t.GetField(MemberName);
+    if Assigned(Member) then
+    begin
+      with Member as TRttiField do
+        if FieldType.TypeKind = TypeKind then
+          Value := GetValue(@Creature);
+    end
+    else
+    begin
+      Member := t.GetProperty(MemberName);
+      if Assigned(Member) then
+        with Member as TRttiProperty do
+          if PropertyType.TypeKind = TypeKind then
+            Value := GetValue(@Creature);
+    end;
+    if not Value.IsEmpty then
+      Exit(Value)
+    else
+      raise EInsufficientRtti.CreateFmt(ErrorMsg, [MemberName,
+        EnumName(TypeInfo(TTypeKind), Ord(TypeKind)), CreatureBaseClassName]);
+  finally
+    c.Free();
+  end;
+end;
+
+function TCreature.GetBaseMember<T>(MemberID: TCreatureProperty): T;
+var
+  PTypInfo: PTypeInfo;
+begin
+  PTypInfo := TypeInfo(T);
+  Result := GetMemberValue(Character(Enum), MemberID, PTypInfo^.Kind).AsType<T>;
+end;
+
+function TCreature.GetBaseReach(MemberID: TCreatureProperty): TReachEnum;
+begin
+  Result := GetBaseMember<TReachEnum>(MemberID);
+end;
+
+function TCreature.GetBaseInt(MemberID: TCreatureProperty): Integer;
+begin
+  Result := GetBaseMember<Integer>(MemberID);
+end;
+
+function TCreature.GetBaseSize(MemberID: TCreatureProperty): TCreatureSize;
+begin
+  Result := GetBaseMember<TCreatureSize>(MemberID);
+end;
+
+function TCreature.GetBaseSource(MemberID: TCreatureProperty): TSourceEnum;
+begin
+  Result := GetBaseMember<TSourceEnum>(MemberID);
+end;
+
+function TCreature.GetBaseStr(MemberID: TCreatureProperty): string;
+begin
+  Result := GetBaseMember<string>(MemberID);
+end;
 
 class procedure TCreature.Assign(var ACreature: TCreature;
   const I: TCreatureEnum);
-var
-  J: Integer;
+//var
+//  J: Integer;
 begin
   with ACreature do
   begin
@@ -881,8 +999,11 @@ begin
     Paralyze := False;
     Enum := I;
     ResEnum := CreatureBase[I].ResEnum;
-    for J := 0 to 1 do
-      Name[J] := CreatureBase[I].Name[J];
+    //for J := 0 to 1 do
+    //  Name[J] := CreatureBase[I].Name[J];
+    // due to the lack of rtti support of record properties, replaced with fields
+    CreatureBase[I].NameInf := CreatureBase[I].Name[0];
+    CreatureBase[I].NameGen := CreatureBase[I].Name[1];
     MaxHitPoints := CreatureBase[I].HitPoints;
     HitPoints := CreatureBase[I].HitPoints;
     Initiative := CreatureBase[I].Initiative;
@@ -891,10 +1012,10 @@ begin
     Level := CreatureBase[I].Level;
     Experience := 0;
     Damage := CreatureBase[I].Damage;
-    Armor := CreatureBase[I].Armor;
+    //Armor := CreatureBase[I].Armor;
     Heal := CreatureBase[I].Heal;
-    SourceEnum := CreatureBase[I].SourceEnum;
-    ReachEnum := CreatureBase[I].ReachEnum;
+//    SourceEnum := CreatureBase[I].SourceEnum;
+//    ReachEnum := CreatureBase[I].ReachEnum;
   end;
 end;
 
@@ -904,8 +1025,8 @@ begin
 end;
 
 class procedure TCreature.Clear(var ACreature: TCreature);
-var
-  J: Integer;
+//var
+//  J: Integer;
 begin
   with ACreature do
   begin
@@ -913,8 +1034,8 @@ begin
     Paralyze := False;
     Enum := crNone;
     ResEnum := reNone;
-    for J := 0 to 1 do
-      Name[J] := '';
+    //for J := 0 to 1 do
+    //  Name[J] := '';
     MaxHitPoints := 0;
     HitPoints := 0;
     Initiative := 0;
@@ -923,10 +1044,10 @@ begin
     Level := 0;
     Experience := 0;
     Damage := 0;
-    Armor := 0;
+//    Armor := 0;
     Heal := 0;
-    SourceEnum := seWeapon;
-    ReachEnum := reAdj;
+//    SourceEnum := seWeapon;
+//    ReachEnum := reAdj;
   end;
 end;
 
@@ -979,6 +1100,14 @@ begin
       to High(Characters[Race][cgLeaders]) do
       if Enum = Characters[Race][cgLeaders][CharKind] then
         Exit(True);
+end;
+
+{ TCreatureBase }
+
+function TCreatureBase.NameCased(Form: Integer): string;
+begin
+  Assert(Form < Length(Name));
+  Result := Name[Form];
 end;
 
 end.

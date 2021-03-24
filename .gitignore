@@ -1,5 +1,5 @@
 *.dcu
-sources/__history/
+*__history*
 sources/DisciplesRL.dproj.local
 *.ppu
 *.o

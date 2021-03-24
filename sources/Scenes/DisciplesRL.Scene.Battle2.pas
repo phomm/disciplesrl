@@ -225,7 +225,7 @@ begin
           if Active and (HitPoints > 0) then
           begin
             LeaderParty.UpdateXP(CharExp, Position);
-            Log.Add(Format('%s получил%s опыт +%d', [Name[0], GenderEnding,
+            Log.Add(Format('%s получил%s опыт +%d', [Name, GenderEnding,
               CharExp]));
           end;
     end;
@@ -236,7 +236,7 @@ begin
           begin
             LeaderParty.UpdateLevel(Position);
             Log.Add(Format('%s повысил%s уровень до %d!',
-              [Name[0], GenderEnding, Level + 1]));
+              [Name, GenderEnding, Level + 1]));
           end;
   end;
 end;
@@ -327,23 +327,23 @@ begin
         case RandomRange(0, 6) of
           0:
             Log.Add(Format('%s пытается атаковать, но внезапно промахивается.',
-              [AtkParty.Creature[AtkPos].Name[0]]));
+              [AtkParty.Creature[AtkPos].Name]));
           1:
             Log.Add(Format('%s атакует мимо цели.',
-              [AtkParty.Creature[AtkPos].Name[0]]));
+              [AtkParty.Creature[AtkPos].Name]));
           2:
             Log.Add(Format('%s атакует... пустоту.',
-              [AtkParty.Creature[AtkPos].Name[0]]));
+              [AtkParty.Creature[AtkPos].Name]));
           3:
             Log.Add(Format('%s тщетно пытается атаковать.',
-              [AtkParty.Creature[AtkPos].Name[0]]));
+              [AtkParty.Creature[AtkPos].Name]));
           4:
             Log.Add(Format('%s атакует %s, но промахивается.',
-              [AtkParty.Creature[AtkPos].Name[0],
-              DefParty.Creature[DefPos].Name[1]]));
+              [AtkParty.Creature[AtkPos].Name,
+              DefParty.Creature[DefPos].NameGen]));
         else
           Log.Add(Format('%s промахивается.',
-            [AtkParty.Creature[AtkPos].Name[0]]));
+            [AtkParty.Creature[AtkPos].Name]));
         end;
         MediaPlayer.Play(mmMiss);
         Sleep(200);
@@ -406,8 +406,8 @@ begin
           DefParty.TakeDamage(AtkParty.Creature[AtkPos].Damage, DefPos);
           Log.Add(Format(GetLogMessage(TCreature.Character(AtkCrEnum)
             .AttackEnum, TCreature.Character(AtkCrEnum).SourceEnum),
-            [AtkParty.Creature[AtkPos].Name[0],
-            DefParty.Creature[DefPos].Name[1],
+            [AtkParty.Creature[AtkPos].Name,
+            DefParty.Creature[DefPos].NameGen,
             AtkParty.Creature[AtkPos].Damage]));
           if (DefParty.Creature[DefPos].HitPoints > 0) then
             MediaPlayer.Play(TCreature.Character(DefCrEnum).Sound[csHit])
@@ -442,8 +442,8 @@ begin
                   DefParty.TakeDamage(AtkParty.Creature[AtkPos].Damage, DefPos);
                   Log.Add(Format(GetLogMessage(TCreature.Character(AtkCrEnum)
                     .AttackEnum, TCreature.Character(AtkCrEnum).SourceEnum),
-                    [AtkParty.Creature[AtkPos].Name[0],
-                    DefParty.Creature[DefPos].Name[1],
+                    [AtkParty.Creature[AtkPos].Name,
+                    DefParty.Creature[DefPos].NameGen,
                     AtkParty.Creature[AtkPos].Damage]));
                   if (DefParty.Creature[DefPos].HitPoints > 0) then
                     MediaPlayer.Play(TCreature.Character(DefCrEnum)
@@ -467,8 +467,8 @@ begin
                       .Damage, DefPos);
                     Log.Add(Format(GetLogMessage(TCreature.Character(AtkCrEnum)
                       .AttackEnum, TCreature.Character(AtkCrEnum).SourceEnum),
-                      [AtkParty.Creature[AtkPos].Name[0],
-                      DefParty.Creature[DefPos].Name[1],
+                      [AtkParty.Creature[AtkPos].Name,
+                      DefParty.Creature[DefPos].NameGen,
                       AtkParty.Creature[AtkPos].Damage]));
                     if (DefParty.Creature[DefPos].HitPoints > 0) then
                       MediaPlayer.Play(TCreature.Character(DefCrEnum)
@@ -487,7 +487,7 @@ begin
             crWyvern:
               ;
           else
-            StartCastSpell(TCreature.Character(AtkCrEnum).Name[0],
+            StartCastSpell(TCreature.Character(AtkCrEnum).NameInf,
               TCreature.Character(AtkCrEnum).SourceEnum);
           end;
           MediaPlayer.Play(TCreature.Character(AtkCrEnum).Sound[csAttack]);
@@ -499,8 +499,8 @@ begin
               DefParty.TakeDamage(AtkParty.Creature[AtkPos].Damage, Position);
               Log.Add(Format(GetLogMessage(TCreature.Character(AtkCrEnum)
                 .AttackEnum, TCreature.Character(AtkCrEnum).SourceEnum),
-                [AtkParty.Creature[AtkPos].Name[0],
-                DefParty.Creature[Position].Name[1],
+                [AtkParty.Creature[AtkPos].Name,
+                DefParty.Creature[Position].NameGen,
                 AtkParty.Creature[AtkPos].Damage]));
               if (DefParty.Creature[Position].HitPoints > 0) then
                 MediaPlayer.Play(TCreature.Character(DefCrEnum).Sound[csHit])
@@ -532,8 +532,8 @@ begin
               begin
                 Party.Heal(Position, Party.Creature[AtkPos].Heal);
                 Log.Add(Format('%s исцеляет %s.',
-                  [Party.Creature[AtkPos].Name[0],
-                  Party.Creature[Position].Name[1]]));
+                  [Party.Creature[AtkPos].Name,
+                  Party.Creature[Position].NameGen]));
               end;
         end
     else
@@ -541,8 +541,8 @@ begin
         if Active and (HitPoints > 0) and (HitPoints < MaxHitPoints) then
         begin
           Party.Heal(DefPos, Party.Creature[AtkPos].Heal);
-          Log.Add(Format('%s исцеляет %s.', [Party.Creature[AtkPos].Name[0],
-            Party.Creature[DefPos].Name[1]]));
+          Log.Add(Format('%s исцеляет %s.', [Party.Creature[AtkPos].Name,
+            Party.Creature[DefPos].NameGen]));
         end;
     end;
     NextTurn;
@@ -563,8 +563,8 @@ begin
             begin
               DefParty.Paralyze(Position);
               Log.Add(Format('%s парализует %s.',
-                [AtkParty.Creature[AtkPos].Name[0],
-                DefParty.Creature[Position].Name[1]]));
+                [AtkParty.Creature[AtkPos].Name,
+                DefParty.Creature[Position].NameGen]));
             end;
       end
   else
@@ -572,8 +572,8 @@ begin
       if Active and (HitPoints > 0) then
       begin
         DefParty.Paralyze(DefPos);
-        Log.Add(Format('%s парализует %s.', [AtkParty.Creature[AtkPos].Name[0],
-          DefParty.Creature[DefPos].Name[1]]));
+        Log.Add(Format('%s парализует %s.', [AtkParty.Creature[AtkPos].Name,
+          DefParty.Creature[DefPos].NameGen]));
       end;
   end;
   NextTurn;

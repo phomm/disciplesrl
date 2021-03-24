@@ -445,7 +445,7 @@ begin
   L := Lf + ResImage[reActFrame].Width + 12;
   with TCreature.Character(C) do
   begin
-    Add(Name[0], True);
+    Add(NameInf, True);
     Add;
     Add('Уровень', Level);
     Add('Точность', ChancesToHit, '%');
@@ -912,7 +912,8 @@ begin
       begin
         DrawImage(reWallpaperDifficulty);
         DrawTitle(reTitleDifficulty);
-        for D in TSaga.TDifficultyEnum do
+        for D := Low(TSaga.TDifficultyEnum)
+          to High(TSaga.TDifficultyEnum) do
         begin
           if Ord(D) = CurrentIndex then
             DrawImage(Lf, Top + Y, reActFrame)
