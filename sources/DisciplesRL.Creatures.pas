@@ -4,6 +4,7 @@ interface
 
 {$IFDEF FPC}
 {$MODESWITCH ADVANCEDRECORDS}
+{$MODE DELPHI}
 {$ENDIF}
 
 // to assign fields in creature base, and overgo lack of rtti for record props
@@ -916,7 +917,6 @@ end;
 function TCreature.GetMemberValue(Creature: TCreatureBase; MemberID: TCreatureProperty;
   TypeKind: TTypeKind): TValue;
 const
-  CreatureBaseClassName = 'DisciplesRL.Creatures.TCreatureBase';
   ErrorMsg = 'Error getting RTTI member %s of type %s from %s';
 var
   c : TRttiContext;
@@ -924,12 +924,15 @@ var
   Member: TRttiMember;
   t: TRttiType;
   Value: TValue;
+  TypInfo: PTypeInfo;
 begin
   c := TRttiContext.Create;
   try
-    t := c.FindType(CreatureBaseClassName);
+    TypInfo := TypeInfo(TCreatureBase);
+    t := c.GetType(TypInfo);
     Value := TValue.Empty;
     MemberName := EnumName(TypeInfo(TCreatureProperty), Ord(MemberID));
+    {$IFNDEF FPC}
     Member := t.GetField(MemberName);
     if Assigned(Member) then
     begin
@@ -938,6 +941,7 @@ begin
           Value := GetValue(@Creature);
     end
     else
+    {$ENDIF}
     begin
       Member := t.GetProperty(MemberName);
       if Assigned(Member) then
@@ -949,7 +953,7 @@ begin
       Exit(Value)
     else
       raise EInsufficientRtti.CreateFmt(ErrorMsg, [MemberName,
-        EnumName(TypeInfo(TTypeKind), Ord(TypeKind)), CreatureBaseClassName]);
+        EnumName(TypeInfo(TTypeKind), Ord(TypeKind)), TypInfo.Name]);
   finally
     c.Free();
   end;
@@ -958,9 +962,18 @@ end;
 function TCreature.GetBaseMember<T>(MemberID: TCreatureProperty): T;
 var
   PTypInfo: PTypeInfo;
+  Value: TValue;
 begin
   PTypInfo := TypeInfo(T);
-  Result := GetMemberValue(Character(Enum), MemberID, PTypInfo^.Kind).AsType<T>;
+  {$IFNDEF FPC}
+  Exit(GetMemberValue(Character(Enum), MemberID, PTypInfo^.Kind).AsType<T>);
+  {$ELSE}
+  Value := GetMemberValue(Character(Enum), MemberID, PTypInfo^.Kind);
+  if Value.TypeInfo.Kind = tkAString then
+    Exit(T(Value.AsAnsiString));
+  if Value.IsOrdinal then
+    Exit(T(Value.AsOrdinal));
+  {$ENDIF}
 end;
 
 function TCreature.GetBaseReach(MemberID: TCreatureProperty): TReachEnum;
@@ -1001,9 +1014,6 @@ begin
     ResEnum := CreatureBase[I].ResEnum;
     //for J := 0 to 1 do
     //  Name[J] := CreatureBase[I].Name[J];
-    // due to the lack of rtti support of record properties, replaced with fields
-    CreatureBase[I].NameInf := CreatureBase[I].Name[0];
-    CreatureBase[I].NameGen := CreatureBase[I].Name[1];
     MaxHitPoints := CreatureBase[I].HitPoints;
     HitPoints := CreatureBase[I].HitPoints;
     Initiative := CreatureBase[I].Initiative;
@@ -1021,6 +1031,9 @@ end;
 
 class function TCreature.Character(const I: TCreatureEnum): TCreatureBase;
 begin
+  // due to the lack of rtti support of record properties, replaced with fields
+  CreatureBase[I].NameInf := CreatureBase[I].Name[0];
+  CreatureBase[I].NameGen := CreatureBase[I].Name[1];
   Result := CreatureBase[I];
 end;
 
