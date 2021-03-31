@@ -171,4 +171,14 @@
       <CustomOptions Value="-dBorland -dVer150 -dDelphi7 -dCompiler6_Up -dPUREPASCAL"/>
     </Other>
   </CompilerOptions>
+  <Debugging>
+    <Exceptions Count="2">
+      <Item1>
+        <Name Value="RunError(201)"/>
+      </Item1>
+      <Item2>
+        <Name Value="ERangeError"/>
+      </Item2>
+    </Exceptions>
+  </Debugging>
 </CONFIG>

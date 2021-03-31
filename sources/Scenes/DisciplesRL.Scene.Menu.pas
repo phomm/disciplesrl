@@ -178,19 +178,30 @@ begin
 end;
 
 procedure TSceneMenu.Update(var Key: Word);
+const
+  ButtonEdges = [Low(TButtonEnum), High(TButtonEnum)];
+  Z = SizeOf(ButtonEdges);
+type
+  SetCast = {$IF Z = 1} Byte {$ELSEIF Z = 2} Word
+    {$ELSEIF Z = 4} Integer {$ELSEIF Z = 8} Int64 {$IFEND};
 begin
   inherited;
-  case Key of
-    K_ENTER:
-      Next;
-    K_ESCAPE:
-      ConfirmQuit;
-    K_UP:
-      CursorPos := TButtonEnum(EnsureRange(Ord(CursorPos) - 1, 0,
-        Ord(High(TButtonEnum))));
-    K_DOWN:
-      CursorPos := TButtonEnum(EnsureRange(Ord(CursorPos) + 1, 0,
-        Ord(High(TButtonEnum))));
+  try
+    case Key of
+      K_ENTER:
+        Next;
+      K_ESCAPE:
+        ConfirmQuit;
+      {$RangeChecks ON}
+      K_UP:
+        CursorPos := Pred(CursorPos);
+      K_DOWN:
+        CursorPos := Succ(CursorPos);
+      {$RangeChecks OFF}
+    end;
+  except
+    on ERangeError do
+      CursorPos := TButtonEnum(Trunc(Log2(SetCast(ButtonEdges - [CursorPos]))));
   end;
 end;
 
